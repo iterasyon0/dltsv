@@ -1,0 +1,48 @@
+#!/bin/bash                                                                                                                                            
+                                                                                                                                                       
+tmpfile=$(mktemp /tmp/dltsv.XXXXXX)                                                                                                                    
+                                                                                                                                                       
+editor=$(command -v vim || command -v nano)                                                                                                            
+[ -z "$editor" ] && {                                                                                                                                  
+  echo "Couldn't find vim or nano."                                                                                                                    
+  exit 1                                                                                                                                               
+}                                                                                                                                                      
+                                                                                                                                                       
+"$editor" "$tmpfile"                                                                                                                                   
+                                                                                                                                                       
+[ ! -s "$tmpfile" ] && {                                                                                                                               
+  echo "File is empty. Exiting..."                                                                                                                     
+  rm "$tmpfile"                                                                                                                                        
+  exit 0                                                                                                                                               
+}                                                                                                                                                      
+                                                                                                                                                       
+echo                                                                                                                                                   
+echo "=== Column Table ==="                                                                                                                            
+echo                                                                                                                                                   
+sed 's/<</|/g' "$tmpfile" | column -t -s '|'                                                                                                           
+                                                                                                                                                       
+echo -e "\n\n\n"                                                                                                                                       
+echo "=== Markdown Table ==="                                                                                                                          
+echo                                                                                                                                                   
+                                                                                                                                                       
+line_num=0                                                                                                                                             
+while IFS= read -r line; do                                                                                                                            
+  [ -z "$line" ] && continue                                                                                                                           
+  md_line="|$(echo "$line" | sed 's/<</|/g')|"                                                                                                         
+  echo "$md_line"                                                                                                                                      
+                                                                                                                                                       
+  if [ "$line_num" -eq 0 ]; then                                                                                                                       
+    col_count=$(grep -o '<<' <<<"$line" | wc -l)                                                                                                       
+    ((col_count++))                                                                                                                                    
+    sep_line=""                                                                                                                                        
+    for ((i = 0; i < col_count; i++)); do                                                                                                              
+      sep_line+="| --- "                                                                                                                               
+    done                                                                                                                                               
+    sep_line+="|"                                                                                                                                      
+    echo "$sep_line"                                                                                                                                   
+  fi                                                                                                                                                   
+                                                                                                                                                       
+  ((line_num++))                                                                                                                                       
+done <"$tmpfile"                                                                                                                                       
+                                                                                                                                                       
+rm "$tmpfile"                                                                                                                                          
